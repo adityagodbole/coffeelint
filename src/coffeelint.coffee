@@ -291,6 +291,9 @@ coffeelint.RULES = RULES =
             </code>
             </pre>
              """
+    no_free_variable_assignment :
+        level : WARN
+        message : 'Free variable assignment detected'
 
     coffeescript_error :
         level : ERROR
@@ -985,7 +988,9 @@ class ASTLinter
         # Add the complexity of all child's nodes to this one.
         node.eachChild (childNode) =>
             nodeLine = childNode.locationData.first_line
-            complexity += @lintNode(childNode, nodeLine) if childNode
+            if childNode
+              childNode.parentNode = node
+              complexity += @lintNode(childNode, nodeLine)
 
         # If the current node is a function, and it's over our limit, add an
         # error to the list.
@@ -1001,8 +1006,31 @@ class ASTLinter
             error = createError 'cyclomatic_complexity', attrs
             @errors.push error if error
 
+        @lintFreeAssignment(node, line) if name == "Assign"
+
         # Return the complexity for the benefit of parent nodes.
         return complexity
+
+      lintFreeAssignment: (node, line) ->
+        do(lvalues = null, vars = null, do_vars = null) =>
+          lvalues = (variable) ->
+            if variable.value
+              [variable.value]
+            else if variable.objects
+              [].concat((lvalues(child.base) for child in variable.objects)...)
+            else
+              []
+          vars = lvalues(node.variable.base).filter((v) -> v != "this")
+          do_vars =
+            if node.parentNode.parentNode and node.parentNode.parentNode.params
+              node.parentNode.parentNode.params.map((p) -> p.name.value)
+            else
+              []
+          vars.forEach (v) =>
+            if v not in do_vars
+              @errors.push createError('no_free_variable_assignment', {level: WARN, lineNumber: line + 1})
+          null
+
 
     _parseCoffeeScriptError : (coffeeError) ->
         rule = RULES['coffeescript_error']
