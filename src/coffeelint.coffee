@@ -295,9 +295,6 @@ coffeelint.RULES = RULES =
         level : WARN
         message : 'Free variable assignment detected'
 
-    duplicate_variable_assignment :
-        level : WARN
-        message : 'Duplicate variable assignment in block'
     coffeescript_error :
         level : ERROR
         message : '' # The default coffeescript error is fine.
@@ -1008,42 +1005,22 @@ class ASTLinter
             }
             error = createError 'cyclomatic_complexity', attrs
             @errors.push error if error
-        if name == 'Block'
-            @lintMultipleFreeAssignments(node, line)
 
         @lintFreeAssignment(node, line) if name == "Assign"
 
         # Return the complexity for the benefit of parent nodes.
         return complexity
 
-      lvalues: (variable) ->
-        if variable.value
-          [variable.value]
-        else if variable.objects
-          [].concat((lvalues(child.base) for child in variable.objects)...)
-        else
-          []
-
-      lintMultipleFreeAssignments: (node, line) ->
-        do(lvals = (node.expressions.map((e) -> e.variable)),
-          lval_values = null,
-          flattened = null,
-          hist = {},
-          dupes = []) =>
-            lval_values = (@lvalues(v.base) for v in lvals when v and v.base).
-              filter((v) -> v != "this")
-            flattened = [].concat(lval_values...)
-            flattened.forEach (v) =>
-              hist[v] = 0 if not hist[v]
-              hist[v] = hist[v] + 1
-              dupes.push(v) if hist[v] == 2
-              @errors.push createError('duplicate_variable_assignment',
-                                       {level: WARN, lineNumber: line + 1})
-        
-
       lintFreeAssignment: (node, line) ->
-        do(vars = null, do_vars = null) =>
-          vars = @lvalues(node.variable.base).filter((v) -> v != "this")
+        do(lvalues = null, vars = null, do_vars = null) =>
+          lvalues = (variable) ->
+            if variable.value
+              [variable.value]
+            else if variable.objects
+              [].concat((lvalues(child.base) for child in variable.objects)...)
+            else
+              []
+          vars = lvalues(node.variable.base).filter((v) -> v != "this")
           do_vars =
             if node.parentNode.parentNode and node.parentNode.parentNode.params
               node.parentNode.parentNode.params.map((p) -> p.name.value)
