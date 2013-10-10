@@ -980,7 +980,8 @@ class ASTLinter
 
     # Lint the AST node and return its cyclomatic complexity.
     lintNode : (node, line) ->
-
+        var_assignment_node_p = (node) ->
+          node.name == "Assign" && node.parentNode.constructor.name != "Obj"
         # Get the complexity of the current node.
         name = node.constructor.name
         complexity = @getComplexity(node)
@@ -1006,13 +1007,17 @@ class ASTLinter
             error = createError 'cyclomatic_complexity', attrs
             @errors.push error if error
 
-        @lintFreeAssignment(node, line) if name == "Assign"
+        if var_assignment_node_p(node)
+          @lintFreeAssignment(node, line)
 
         # Return the complexity for the benefit of parent nodes.
         return complexity
 
       lintFreeAssignment: (node, line) ->
-        do(lvalues = null, vars = null, do_vars = null) =>
+        do(lvalues = null, vars = null, do_vars = null, parentCodeBlock = null) =>
+          parentCodeBlock = (node) ->
+            node = node.parentNode while node && !node.params
+            node
           lvalues = (variable) ->
             if variable.value
               [variable.value]
@@ -1021,9 +1026,9 @@ class ASTLinter
             else
               []
           vars = lvalues(node.variable.base).filter((v) -> v != "this")
-          do_vars =
-            if node.parentNode.parentNode and node.parentNode.parentNode.params
-              node.parentNode.parentNode.params.map((p) -> p.name.value)
+          do_vars = do(pcb = parentCodeBlock(node)) ->
+            if pcb
+              pcb.params.map((p) -> p.name.value)
             else
               []
           vars.forEach (v) =>
