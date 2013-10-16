@@ -88,7 +88,6 @@ coffeelint.invertLiterate = (source) ->
 _rules = {}
 coffeelint.registerRule = (RuleConstructor, ruleName = undefined) ->
     p = new RuleConstructor
-
     name = p?.rule?.name or "(unknown)"
     e = (msg) -> throw new Error "Invalid rule: #{name} #{msg}"
     unless p.rule?
@@ -130,6 +129,7 @@ coffeelint.registerRule require './rules/no_backticks.coffee'
 coffeelint.registerRule require './rules/no_implicit_parens.coffee'
 coffeelint.registerRule require './rules/no_empty_param_list.coffee'
 coffeelint.registerRule require './rules/no_stand_alone_at.coffee'
+coffeelint.registerRule require './rules/no_free_variable_assignment.coffee'
 coffeelint.registerRule require './rules/space_operators.coffee'
 coffeelint.registerRule require './rules/duplicate_key.coffee'
 coffeelint.registerRule require './rules/empty_constructor_needs_parens.coffee'
