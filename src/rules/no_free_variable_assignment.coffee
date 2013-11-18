@@ -1,10 +1,10 @@
-module.exports = class NoTabs
+module.exports = class NoFreeVars
     rule:
         name: 'no_free_variable_assignment'
         value : 10
         level : 'warn'
         message : 'Free variable assignment not allowed'
-        description : 'Use do to create locally scoped variables'
+        description : 'Use do to create locally scoped variables outside do'
 
     lintAST : (node, @astApi) ->
         @lintNode node
